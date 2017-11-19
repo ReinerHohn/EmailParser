@@ -1,8 +1,16 @@
 import imaplib
 import email
+import csv
+
+ifile = open("Cred.csv", "r")
+reader = csv.reader(ifile)
+
+for row in reader:
+    username = row[0]
+    pwd = row[1]
 
 mail = imaplib.IMAP4_SSL("imap.gmx.net")
-mail.login("mi-dick@gmx.de", "ibidGMX15")
+mail.login(username, pwd)
 mail.list()
 # Out: list of "folders" aka labels in gmail.
 mail.select("inbox") # connect to inbox.
