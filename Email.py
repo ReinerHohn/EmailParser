@@ -15,46 +15,36 @@ mail.list()
 # Out: list of "folders" aka labels in gmail.
 mail.select("inbox") # connect to inbox.
 
-result, data = mail.uid('search', None, "ALL") # search and return uids instead
-latest_email_uid = data[0].split()[-1]
-result, data = mail.uid('fetch', latest_email_uid, '(RFC822)')
-raw_email = data[0][1]
+mail.list()
+mail.select('inbox')
+result, data = mail.uid('search', None, "UNSEEN") # (ALL/UNSEEN)
+i = len(data[0].split())
 
-# Für python 2: email_message = email.message_from_string(raw_email)
-email_message = email.message_from_bytes(raw_email)
+for x in range(i):
+    latest_email_uid = data[0].split()[x]
+    result, email_data = mail.uid('fetch', latest_email_uid, '(RFC822)')
+    # result, email_data = conn.store(num,'-FLAGS','\\Seen')
+    # this might work to set flag to seen, if it doesn't already
+    raw_email = email_data[0][1]
+    raw_email_string = raw_email.decode('utf-8')
+    email_message = email.message_from_string(raw_email_string)
 
-print
-strTo = email_message['To']
+    # Header Details
+    #date_tuple = email.utils.parsedate_tz(email_message['Date'])
+    #if date_tuple:
+    #    local_date = datetime.datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
+    #    local_message_date = "%s" %(str(local_date.strftime("%a, %d %b %Y %H:%M:%S")))
+    #email_from = str(email.header.make_header(email.header.decode_header(email_message['From'])))
+    #email_to = str(email.header.make_header(email.header.decode_header(email_message['To'])))
+    #subject = str(email.header.make_header(email.header.decode_header(email_message['Subject'])))
 
-print
-strFrom = email.utils.parseaddr(email_message['From'])  # for parsing "Yuji Tomita" <yuji@grovemade.com>
-
-print
-email_message.items()  # print all headers
-
-
-# note that if you want to get text content (body) and the email contains
-# multiple payloads (plaintext/ html), you must parse each message separately.
-# use something like the following: (taken from a stackoverflow post)
-def get_first_text_block(self, email_message_instance):
-    maintype = email_message_instance.get_content_maintype()
-    if maintype == 'multipart':
-        for part in email_message_instance.get_payload():
-            if part.get_content_maintype() == 'text':
-                return part.get_payload()
-    elif maintype == 'text':
-        return email_message_instance.get_payload()
-
-
-
-
-
-subject=msg['subject']
-print(subject)
-payload=msg.get_payload()
-body=extract_body(payload)
-print(body)
-i=2
-
-
-
+    # Body details
+    for part in email_message.walk():
+        if part.get_content_type() == "text/plain":
+            body = part.get_payload(decode=True)
+            file_name = "email_" + str(x) + ".txt"
+            output_file = open(file_name, 'w')
+            output_file.write("From: %s\nTo: %s\nDate: %s\nSubject: %s\n\nBody: \n\n%s" %(email_from, email_to,local_message_date, subject, body.decode('utf-8')))
+            output_file.close()
+        else:
+            continue
