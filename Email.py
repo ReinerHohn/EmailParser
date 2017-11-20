@@ -11,13 +11,14 @@ for row in reader:
 
 mail = imaplib.IMAP4_SSL("imap.gmx.net")
 mail.login(username, pwd)
-mail.list()
-# Out: list of "folders" aka labels in gmail.
-mail.select("inbox") # connect to inbox.
+result, mailboxlist = mail.list()
+#for i in mailboxlist:
+#    print(i)
 
-mail.list()
-mail.select('inbox')
-result, data = mail.uid('search', None, "UNSEEN") # (ALL/UNSEEN)
+mail.select('"INBOX/GELD/Best - Bezahlung"') #mailboxlist[0])
+result, data = mail.uid('search', None, '(FROM "service@paypal.de")' )
+#result, data = mail.uid('search', None, '(FROM "Autodesk" SUBJECT "Reset")' )
+#result, data = mail.uid('search', None, "UNSEEN") # (ALL/UNSEEN)
 i = len(data[0].split())
 
 for x in range(i):
@@ -42,9 +43,25 @@ for x in range(i):
     for part in email_message.walk():
         if part.get_content_type() == "text/plain":
             body = part.get_payload(decode=True)
-            file_name = "email_" + str(x) + ".txt"
-            output_file = open(file_name, 'w')
-            output_file.write("From: %s\nTo: %s\nDate: %s\nSubject: %s\n\nBody: \n\n%s" %(email_from, email_to,local_message_date, subject, body.decode('utf-8')))
-            output_file.close()
+            strName="Transaktionscode: ".encode('utf-8')
+            pos = body.find(strName)
+            length =  len(strName)
+            start = pos + length
+            if pos > 0:
+                transactioncode = body[start: start + 17]
+
+            print(transactioncode)
+            strName = "Artikelnr.".encode('utf-8')
+            pos = body.find(strName)
+            length = len(strName)
+            start = pos + length
+            if pos > 0:
+                artnr = body[start: start + 12]
+                print(artnr)
+            # Rechnungsnummer:
+            #file_name = "email_" + str(x) + ".txt"
+            #output_file = open(file_name, 'w')
+            #output_file.write("From: %s\nTo: %s\nDate: %s\nSubject: %s\n\nBody: \n\n%s" %(email_from, email_to,local_message_date, subject, body.decode('utf-8')))
+            #output_file.close()
         else:
             continue
