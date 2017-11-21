@@ -75,11 +75,11 @@ def getEbayInBest( email_message ):
     # Body details
     body = get_decoded_email_body(email_message)
     artnr = getBodyItem(body, "Artikelnummer: ", 12)
-    out=['Artikelnummer: ', artnr]
-    spamwriter.writerow(out)
     stck = getBodyItem(body, "Stückzahl: ", 2)
     lieferung = getBodyItem(body, "Lieferung ca.: ", 27)
     bazahlsum = getBodyItem(body, "Bezahlt: ", 12)
+    out = ['Artikelnummer: ', artnr, "Stückzahl: ", stck, "Lieferung ca.: ", lieferung, "Bezahlt: ", bazahlsum]
+    spamwriter.writerow(out)
 
 def getBodyItem(body, parse_string, length):
     strRet = ""
