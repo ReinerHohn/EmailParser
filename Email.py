@@ -5,6 +5,10 @@ import csv
 ifile = open("Cred.csv", "r")
 reader = csv.reader(ifile)
 
+
+ofile = open('Parsed.csv', 'w')
+spamwriter = csv.writer(ofile, delimiter=';', quoting=csv.QUOTE_MINIMAL) #quotechar='|',
+
 for row in reader:
     username = row[0]
     pwd = row[1]
@@ -71,6 +75,8 @@ def getEbayInBest( email_message ):
     # Body details
     body = get_decoded_email_body(email_message)
     artnr = getBodyItem(body, "Artikelnummer: ", 12)
+    out=['Artikelnummer: ', artnr]
+    spamwriter.writerow(out)
     stck = getBodyItem(body, "Stückzahl: ", 2)
     lieferung = getBodyItem(body, "Lieferung ca.: ", 27)
     bazahlsum = getBodyItem(body, "Bezahlt: ", 12)
@@ -85,16 +91,16 @@ def getBodyItem(body, parse_string, length):
         strRet = body[start: start + 17]
     return strRet
 
-
 getBestellungen()
+ofile.close()
+ifile.close()
 
 
-
-mail.select('"INBOX/GELD/Best - Bezahlung"') #mailboxlist[0])
-result, data = mail.uid('search', None, '(FROM "service@paypal.de")' )
+#mail.select('"INBOX/GELD/Best - Bezahlung"') #mailboxlist[0])
+#result, data = mail.uid('search', None, '(FROM "service@paypal.de")' )
 #result, data = mail.uid('search', None, '(FROM "Autodesk" SUBJECT "Reset")' )
 #result, data = mail.uid('search', None, "UNSEEN") # (ALL/UNSEEN)
-i = len(data[0].split())
+#i = len(data[0].split())
 
 
  # Header Details
