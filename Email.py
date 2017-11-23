@@ -1,6 +1,7 @@
 import imaplib
 import email
 import csv
+import datetime
 
 ifile = open("Cred.csv", "r")
 reader = csv.reader(ifile)
@@ -10,6 +11,11 @@ ofile = open('EbayParsed.csv', 'w')
 ebaywriter = csv.writer(ofile, delimiter=';', quoting=csv.QUOTE_MINIMAL) #quotechar='|',
 ofilePP = open('PaypalParsed2.csv', 'w')
 paypalwriter = csv.writer(ofilePP, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+out = ["Artikelnummer: ", "Transactionsnummer: ", "Betreff", "Datum" ]
+paypalwriter.writerow(out)
+
+out = ["Artikelnummer: ", "Stückzahl: ", "Lieferung ca.: ", "Bezahlt: "]
+ebaywriter.writerow(out)
 
 for row in reader:
     username = row[0]
@@ -49,10 +55,18 @@ def getBezahlungen():
             raw_email_string = raw_email.decode('utf-8')
             email_message = email.message_from_string(raw_email_string)
 
+            date_tuple = email.utils.parsedate_tz(email_message['Date'])
+            if date_tuple:
+                jaja=email.utils.mktime_tz(date_tuple)
+                local_date = datetime.datetime.fromtimestamp(jaja)
+                local_message_date = "%s" %(str(local_date.strftime("%a, %d %b %Y %H:%M:%S")))
+
+            subject = str(email.header.make_header(email.header.decode_header(email_message['Subject'])))
+
             email_from = str(email.header.make_header(email.header.decode_header(email_message['From'])))
             if "service@paypal.de" in email_from:
-                getPaypalInBez( email_message )
-            # subject = str(email.header.make_header(email.header.decode_header(email_message['Subject'])))
+                getPaypalInBez( email_message, subject, local_message_date )
+
         except UnicodeDecodeError:
             print( "nummer ist" + str(i))
 
@@ -109,7 +123,7 @@ def getEbayInBest( email_message ):
     out = ['Artikelnummer: ', artnr, "Stückzahl: ", stck, "Lieferung ca.: ", lieferung, "Bezahlt: ", bazahlsum]
     ebaywriter.writerow(out)
 
-def getPaypalInBez( email_message ):
+def getPaypalInBez( email_message, subject, date_local ):
     # Body details
     body = get_decoded_email_body(email_message)
     artnr = getBodyItem(body, "Artikelnummer: ", 12)
@@ -117,15 +131,17 @@ def getPaypalInBez( email_message ):
         artnr = getBodyItem(body, "Artikelnr.: ", 12)
     if artnr == "":
         artnr = getBodyItem(body, "Artikelnr. ", 12)
+    if artnr == "":
+        artnr = getBodyItem(body, "Artikelnr.", 12)
 
-    transact = getBodyItemFromStartIndex(body, body.find("Transaktionscode: < a: "), "id=", 17)
+    transact = getBodyItem(body, 'Transaktionscode: <a target="new" href="https://www.paypal.com/de/cgi-bin/webscr?cmd=_view-a-trans&amp;id=', 17)
     if transact == "":
         id = transact = getBodyItem(body, "Transaktionscode: ", 17)
     if artnr == "":
         i = 2
     if transact == "":
         id = transact = getBodyItem(body, "id=", 17)
-    out = ['Artikelnummer: ', artnr, "Transactionsnummer: ", transact]
+    out = [ artnr, transact, subject, date_local ]
     paypalwriter.writerow(out)
 
 def getBodyItem(body, parse_string, length):
@@ -136,7 +152,7 @@ def getBodyItem(body, parse_string, length):
     start = pos + length
     if pos > 0:
         strRet = body[start: start + 17]
-    return strRet, pos
+    return strRet
 
 def getBodyItemFromStartIndex(body, index, parse_string, length):
     strRet = ""
