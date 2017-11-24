@@ -2,6 +2,7 @@ import imaplib
 import email
 import csv
 import datetime
+import re
 
 ifile = open("Cred.csv", "r")
 reader = csv.reader(ifile)
@@ -126,13 +127,13 @@ def getEbayInBest( email_message ):
 def getPaypalInBez( email_message, subject, date_local ):
     # Body details
     body = get_decoded_email_body(email_message)
-    artnr = getBodyItem(body, "Artikelnummer: ", 12)
+    artnr = getBodyItemDelimited(body, "Artikelnummer: ", "<")
     if artnr == "":
-        artnr = getBodyItem(body, "Artikelnr.: ", 12)
+        artnr = getBodyItemDelimited(body, "Artikelnr.: ", "<")
     if artnr == "":
-        artnr = getBodyItem(body, "Artikelnr. ", 12)
+        artnr = getBodyItemDelimited(body, "Artikelnr. ", "<")
     if artnr == "":
-        artnr = getBodyItem(body, "Artikelnr.", 12)
+        artnr = getBodyItemDelimited(body, "Artikelnr.", "<")
 
     transact = getBodyItem(body, 'Transaktionscode: <a target="new" href="https://www.paypal.com/de/cgi-bin/webscr?cmd=_view-a-trans&amp;id=', 17)
     if transact == "":
@@ -144,14 +145,43 @@ def getPaypalInBez( email_message, subject, date_local ):
     out = [ artnr, transact, subject, date_local ]
     paypalwriter.writerow(out)
 
-def getBodyItem(body, parse_string, length):
+def getBodyItemDelimited(body, parse_string, endstr):
     strRet = ""
-    strName = parse_string
-    pos = body.find(strName)
-    length = len(strName)
-    start = pos + length
-    if pos > 0:
-        strRet = body[start: start + 17]
+    lenght = len(body)
+    startpos = body.find(parse_string)
+    if startpos > 0:
+        endpos = body.find(endstr, startpos)
+        length = endpos - startpos
+        return getBodyItem(body, parse_string, length)
+    else:
+        return ""
+def getBodyItem(body, parse_string, length_item):
+    strRet = ""
+    find_pos = body.find(parse_string)
+    length_parse_str = len(parse_string)
+    if find_pos > 0:
+        # Finde start des Suchstrings hinter suchtoken
+        start = find_pos + length_parse_str
+        strFound = body[start: start + length_item]
+        strRet = strFound
+
+        # suche illegale Zeichen
+        start_inval = re.search('<|\\|>|\\n', strFound)
+        while start_inval != None:
+            first_ill = start_inval.end()
+            # Schneide vorne die illegalen Zeichen ab
+            strRet = strRet[:first_ill - 1]
+            start_inval = re.search('<|\\|>|\\n', strRet)
+
+        # Erstes gültiges Zeichen holen
+        start_alpha_num = re.search('[A-Z]|[0-9]|[a-z]', strRet)
+        if None != start_alpha_num:
+            start_num_pos = start_alpha_num.start()
+            # Schneide vorne die nicht alpha-num Zeichen ab
+            strRet = strRet[start_num_pos:]
+            end_alpha_num = re.search('<|\\|>|\\n', strRet)
+            if None != end_alpha_num:
+                strRet = strRet[end_alpha_num.end() ]
     return strRet
 
 def getBodyItemFromStartIndex(body, index, parse_string, length):
@@ -164,7 +194,7 @@ def getBodyItemFromStartIndex(body, index, parse_string, length):
         strRet = body[start: start + 17]
     return strRet, pos
 
-getBestellungen()
+#getBestellungen()
 getBezahlungen()
 ofile.close()
 ofilePP.close()
