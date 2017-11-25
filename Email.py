@@ -7,10 +7,11 @@ import re
 ifile = open("Cred.csv", "r")
 reader = csv.reader(ifile)
 
+id_dict = { "0": "0"}
 
-ofile = open('EbayParsed.csv', 'w')
+ofile = open('EbayParsed.csv', 'w', newline='')
 ebaywriter = csv.writer(ofile, delimiter=';', quoting=csv.QUOTE_MINIMAL) #quotechar='|',
-ofilePP = open('PaypalParsed2.csv', 'w')
+ofilePP = open('PaypalParsed2.csv', 'w', newline='')
 paypalwriter = csv.writer(ofilePP, delimiter=';', quoting=csv.QUOTE_MINIMAL)
 out = ["Artikelnummer: ", "Transactionsnummer: ", "Betreff", "Datum" ]
 paypalwriter.writerow(out)
@@ -121,7 +122,9 @@ def getEbayInBest( email_message ):
     stck = getBodyItem(body, "Stückzahl: ", 2)
     lieferung = getBodyItem(body, "Lieferung ca.: ", 27)
     bazahlsum = getBodyItem(body, "Bezahlt: ", 12)
-    out = ['Artikelnummer: ', artnr, "Stückzahl: ", stck, "Lieferung ca.: ", lieferung, "Bezahlt: ", bazahlsum]
+    getBodyItemDelimited(body, "Bezahlt: EUR ", " mit")
+    out = [artnr, stck, lieferung, bazahlsum]
+    id_dict[artnr]=out
     ebaywriter.writerow(out)
 
 def getPaypalInBez( email_message, subject, date_local ):
@@ -194,7 +197,7 @@ def getBodyItemFromStartIndex(body, index, parse_string, length):
         strRet = body[start: start + 17]
     return strRet, pos
 
-#getBestellungen()
+getBestellungen()
 getBezahlungen()
 ofile.close()
 ofilePP.close()
