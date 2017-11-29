@@ -9,10 +9,11 @@ reader = csv.reader(ifile)
 
 id_dict = { "0": "0"}
 
-ofile = open('EbayParsed.csv', 'w', newline='')
-ebaywriter = csv.writer(ofile, delimiter=';', quoting=csv.QUOTE_MINIMAL) #quotechar='|',
-ofilePP = open('PaypalParsed2.csv', 'w', newline='')
-paypalwriter = csv.writer(ofilePP, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+iofileEbay = open('EbayParsed.csv', 'r+', newline='')
+ebaywriter = csv.writer(iofileEbay, delimiter=';', quoting=csv.QUOTE_MINIMAL) #quotechar='|',
+ebayreader = csv.reader(iofileEbay)
+iofilePP = open('PaypalParsed2.csv', 'r+', newline='')
+paypalwriter = csv.writer(iofilePP, delimiter=';', quoting=csv.QUOTE_MINIMAL)
 out = ["Artikelnummer: ", "Transactionsnummer: ", "Betreff", "Datum" ]
 paypalwriter.writerow(out)
 
@@ -121,10 +122,10 @@ def getEbayInBest( email_message ):
         artnr = getBodyItem(body, "Artikelnr.: ", 12)
     stck = getBodyItem(body, "Stückzahl: ", 2)
     lieferung = getBodyItem(body, "Lieferung ca.: ", 27)
-    bazahlsum = getBodyItem(body, "Bezahlt: ", 12)
+    bezahlsum = getBodyItem(body, "Bezahlt: ", 12)
     getBodyItemDelimited(body, "Bezahlt: EUR ", " mit")
-    out = [artnr, stck, lieferung, bazahlsum]
-    id_dict[artnr]=out
+    out = [artnr, stck, lieferung, bezahlsum]
+    id_dict[artnr]={"artnr" : artnr, "stck" : stck, "lieferung":lieferung, "bezahlsum":bezahlsum }
     ebaywriter.writerow(out)
 
 def getPaypalInBez( email_message, subject, date_local ):
@@ -145,7 +146,13 @@ def getPaypalInBez( email_message, subject, date_local ):
         i = 2
     if transact == "":
         id = transact = getBodyItem(body, "id=", 17)
-    out = [ artnr, transact, subject, date_local ]
+
+
+    if artnr in id_dict:
+        ret = id_dict[artnr]
+        out = [artnr, transact, subject, date_local, ret["artnr"], ret["stck"], ret["lieferung"], ret["bezahlsum"]]
+    else:
+        out = [artnr, transact, subject, date_local]
     paypalwriter.writerow(out)
 
 def getBodyItemDelimited(body, parse_string, endstr):
@@ -199,8 +206,8 @@ def getBodyItemFromStartIndex(body, index, parse_string, length):
 
 getBestellungen()
 getBezahlungen()
-ofile.close()
-ofilePP.close()
+iofileEbay.close()
+iofilePP.close()
 ifile.close()
 
 
