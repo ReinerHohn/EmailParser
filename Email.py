@@ -4,8 +4,29 @@ import csv
 import datetime
 import re
 
-ifile = open("Cred.csv", "r")
-reader = csv.reader(ifile)
+import logging
+from datetime import date
+from fints.client import FinTS3PinTanClient
+
+#ifile = open("Cred.txt", "r")
+#reader = csv.reader(ifile)
+
+def dictToFile(dictionary, filenName):
+    with open(filenName, "w") as file:
+        for k, v in dictionary.items():
+            dictionary_content = k + ": " + v + "\n"
+            file.write(dictionary_content)
+
+def fileToDict(filenName):
+    d = {}
+    with open(filenName) as f:
+        for line in f:
+            # Remove backslash
+            line=line[:len(line)-1]
+            # Split value pairs
+            (key, val) = line.split(",")
+            d[key] = val
+    return d
 
 id_dict = { "0": "0"}
 
@@ -21,9 +42,10 @@ paypalwriter = csv.writer(iofilePP, delimiter=';', quoting=csv.QUOTE_MINIMAL)
 out = ["Artikelnummer: ", "Transactionsnummer: ", "Betreff", "Datum" ]
 paypalwriter.writerow(out)
 
-for row in reader:
-    username = row[0]
-    pwd = row[1]
+pw_dict = fileToDict("Cred.txt")
+
+username=pw_dict["GMX_EMAIL"]
+pwd=pw_dict["GMX_PW"]
 
 mail = imaplib.IMAP4_SSL("imap.gmx.net")
 mail.login(username, pwd)
@@ -116,6 +138,8 @@ def getEbayInBest( email_message, subject, date_local ):
     getBodyItemDelimited(body, "Bezahlt: EUR ", " mit")
     out = [artnr, subject, date_local, stck, lieferung, bezahlsum]
     id_dict[artnr]={"artnr" : artnr, "subject" : subject, "date_local" : date_local, "stck" : stck, "lieferung":lieferung, "bezahlsum":bezahlsum }
+
+    print(subject)
     try:
         ebaywriter.writerow(out)
     except:
@@ -199,6 +223,35 @@ def getBodyItemFromStartIndex(body, index, parse_string, length):
         strRet = body[start: start + 17]
     return strRet, pos
 
+
+def getBankTransactions(pw_dict):
+    logging.basicConfig(level=logging.DEBUG)
+    f = FinTS3PinTanClient(
+       pw_dict['VB_BLZ'],  # Your bank's BLZ
+       pw_dict['VB_ALIAS'],
+       pw_dict['VB_PW'],
+       pw_dict['VB_ENDP']  # endpoint, e.g.: https://hbci-pintan.gad.de/cgi-bin/hbciservlet
+    )
+
+    accounts = f.get_sepa_accounts()
+    print(accounts)
+    # [SEPAAccount(iban='DE12345678901234567890', bic='ABCDEFGH1DEF', accountnumber='123456790', subaccount='',
+    #              blz='123456789')]
+
+    statement = f.get_statement(accounts[0], date(2016, 12, 1), date.today())
+    print([t.data for t in statement])
+    # The statement is a list of transaction objects as parsed by the mt940 parser, see
+    # https://mt940.readthedocs.io/en/latest/mt940.html#mt940.models.Transaction
+    # for documentation. Most information is contained in a dict accessible via their
+    # ``data`` property
+
+    # for retrieving the holdings of an account:
+    holdings = f.get_holdings(accounts[0])
+    # holdings contains a list of namedtuple values containing ISIN, name,
+    # market_value, pieces, total_value and valuation_date as parsed from
+    # the MT535 message.
+
+getBankTransactions(pw_dict)
 getBestellungen()
 getBezahlungen()
 iofileEbay.close()
