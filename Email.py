@@ -238,8 +238,15 @@ def getBankTransactions(pw_dict):
     # [SEPAAccount(iban='DE12345678901234567890', bic='ABCDEFGH1DEF', accountnumber='123456790', subaccount='',
     #              blz='123456789')]
 
-    statement = f.get_statement(accounts[0], date(2016, 12, 1), date.today())
-    print([t.data for t in statement])
+    statement = f.get_statement(accounts[0], date(2017, 10, 21), date.today())
+    for t in statement:
+        amount = t.data['amount'].amount
+        vb_date=t.data['date']
+        try:
+            transaction_details = t.data['transaction_details']
+            parseBeleg(transaction_details)
+        except:
+            print( "Hat kein transaction_details")
     # The statement is a list of transaction objects as parsed by the mt940 parser, see
     # https://mt940.readthedocs.io/en/latest/mt940.html#mt940.models.Transaction
     # for documentation. Most information is contained in a dict accessible via their
@@ -251,6 +258,33 @@ def getBankTransactions(pw_dict):
     # market_value, pieces, total_value and valuation_date as parsed from
     # the MT535 message.
 
+def parseBeleg(transaction_details):
+    eref = getIbanField(transaction_details, "EREF+")
+    mref = getIbanField(transaction_details, "MREF+")
+    cred = getIbanField(transaction_details, "CRED+")
+    svwz = getIbanField(transaction_details, "SVWZ+")
+    if eref != "":
+        convertIbanToBeleg(eref, mref, cred, svwz)
+
+def convertIbanToBeleg(eref, mref, cred, svwz):
+    terminal_id = eref[:8]
+    ta_nr = eref[8:14]
+    datum= eref[14:20]
+    end_genem = re.search('\?', mref)
+    if None != end_genem:
+        genemigungs_nr= mref[:end_genem.end() - 1 ]
+    verwendzw = svwz
+
+def getIbanField(text, field_id):
+    field = ""
+    start_field_id = re.search(field_id, text)
+    if start_field_id != None:
+        field_first = start_field_id.end()
+        field = text[field_first + 1:]
+        end_field = re.search(' ', field)
+        if end_field != None:
+            field = field[:end_field.start() ]
+    return field
 getBankTransactions(pw_dict)
 getBestellungen()
 getBezahlungen()
