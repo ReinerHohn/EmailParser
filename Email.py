@@ -8,6 +8,8 @@ import logging
 from datetime import date
 from fints.client import FinTS3PinTanClient
 
+import Datenbank
+
 #ifile = open("Cred.txt", "r")
 #reader = csv.reader(ifile)
 
@@ -27,6 +29,8 @@ def fileToDict(filenName):
             (key, val) = line.split(",")
             d[key] = val
     return d
+
+belegDb = Datenbank.BelegDb()
 
 id_dict = { "0": "0"}
 
@@ -244,9 +248,9 @@ def getBankTransactions(pw_dict):
         vb_date=t.data['date']
         try:
             transaction_details = t.data['transaction_details']
-            parseBeleg(transaction_details)
         except:
             print( "Hat kein transaction_details")
+        parseBeleg(amount, vb_date, transaction_details)
     # The statement is a list of transaction objects as parsed by the mt940 parser, see
     # https://mt940.readthedocs.io/en/latest/mt940.html#mt940.models.Transaction
     # for documentation. Most information is contained in a dict accessible via their
@@ -258,22 +262,25 @@ def getBankTransactions(pw_dict):
     # market_value, pieces, total_value and valuation_date as parsed from
     # the MT535 message.
 
-def parseBeleg(transaction_details):
+def parseBeleg(amount, vb_date, transaction_details):
     eref = getIbanField(transaction_details, "EREF+")
     mref = getIbanField(transaction_details, "MREF+")
     cred = getIbanField(transaction_details, "CRED+")
     svwz = getIbanField(transaction_details, "SVWZ+")
     if eref != "":
-        convertIbanToBeleg(eref, mref, cred, svwz)
+        saveBeleg(amount, vb_date, eref, mref, cred, svwz)
 
-def convertIbanToBeleg(eref, mref, cred, svwz):
+def saveBeleg(betrag, datum, eref, mref, cred, svwz):
     terminal_id = eref[:8]
     ta_nr = eref[8:14]
-    datum= eref[14:20]
+    #datum= eref[14:20]
     end_genem = re.search('\?', mref)
     if None != end_genem:
         genemigungs_nr= mref[:end_genem.end() - 1 ]
-    verwendzw = svwz
+    verwend_zw = svwz.replace(",", " ")
+
+
+    belegDb.insertBeleg(terminal_id, ta_nr, genemigungs_nr, verwend_zw, betrag, datum)
 
 def getIbanField(text, field_id):
     field = ""
